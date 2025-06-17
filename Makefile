@@ -1,8 +1,8 @@
-main_package_path = ./cmd/main.go
-binary_name = alessor
+main_package_path = ./cmd/server/main.go
+binary_name = zedsync
 docker_usrname = zdev19
-image_name = lessor-service
-container_name = lessor-service-container
+image_name = zedsync
+container_name = zedsync-service-container
 
 ## development
 ## build:
