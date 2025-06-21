@@ -1,7 +1,7 @@
-package server
+package main
 
 import "fmt"
 
-func Main() {
+func main() {
 	fmt.Println("running on 8090")
 }
