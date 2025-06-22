@@ -14,8 +14,7 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./:/app
-      - air_tmp:/tmp/air
+      - ./:/app:cached
     networks:
       - zsync-network
 

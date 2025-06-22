@@ -17,8 +17,8 @@ import (
 )
 
 type Persister interface {
-	GetDB() *sql.DB
-	GetBunDB() *bun.DB
+	DB() *sql.DB
+	BnDB() *bun.DB
 }
 
 type Store struct {
@@ -26,11 +26,11 @@ type Store struct {
 	BdB bun.DB
 }
 
-func (s Store) GetDB() *sql.DB {
+func (s Store) DB() *sql.DB {
 	return s.db
 }
 
-func (s Store) GetBunDB() *bun.DB {
+func (s Store) BnDB() *bun.DB {
 	return &s.BdB
 }
 
@@ -86,7 +86,7 @@ func (s Store) TestConnection() error {
 	return s.db.Ping()
 }
 
-func DbCon(dbConf config.DatabaseCfg) (*sql.DB, error) {
+func DBCon(dbConf config.DatabaseCfg) (*sql.DB, error) {
 	var tlsConfig *tls.Config
 
 	if dbConf.SSLMode != "disable" {

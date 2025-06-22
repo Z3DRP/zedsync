@@ -1,3 +1,4 @@
+DROP EXTENSION IF EXISTS "uuid-ossp";
 DROP INDEX IF EXISTS idx_role_name;
 DROP TABLE IF EXISTS roles;
 

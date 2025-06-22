@@ -27,14 +27,14 @@ func main() {
 		log.Fatalf("failed to load config %v", err)
 	}
 
-	dbcon, err := store.DbCon(cfg.Database)
+	dbcon, err := store.DBCon(cfg.Database)
 	if err != nil {
 		log.Fatalf("could not connect to database")
 		return
 	}
 
 	dbStore := store.NewBuilder().SetDB(dbcon).SetBunDB().Build()
-	dbStore.GetBunDB().AddQueryHook(bundebug.NewQueryHook(
+	dbStore.BnDB().AddQueryHook(bundebug.NewQueryHook(
 		bundebug.WithEnabled(false),
 		bundebug.FromEnv(),
 	))
@@ -42,7 +42,7 @@ func main() {
 	app := &cli.App{
 		Name: "migrate",
 		Commands: []*cli.Command{
-			newMigrationCmd(migrate.NewMigrator(dbStore.GetBunDB(), migrations.New(), migrate.WithMarkAppliedOnSuccess(true))),
+			newMigrationCmd(migrate.NewMigrator(dbStore.BnDB(), migrations.New(), migrate.WithMarkAppliedOnSuccess(true))),
 		},
 	}
 	if err := app.Run(os.Args); err != nil {

@@ -25,6 +25,11 @@ import (
 // }
 
 var ErrNoRecords = errors.New("no records found")
+var ErrDBWrite = errors.New("failed to write to db")
+var ErrDBRead = errors.New("failed to read db")
+var ErrDBDelete = errors.New("failed to delete db record")
+var ErrFailedTransaction = errors.New("an issue occurred with the transaction")
+var ErrFailedRollback = errors.New("failed to rollback db")
 
 type identifier interface {
 	~int | ~string
@@ -61,7 +66,7 @@ func (br BasicRepo[T, M]) Get(ctx context.Context, key T) (*M, error) {
 	return &domObj, nil
 }
 
-func (br BasicRepo[T, M]) List(ctx context.Context) ([]M, error) {
+func (br BasicRepo[T, M]) List(ctx context.Context) ([]*M, error) {
 	var domObj []M
 	err := br.BnDB().NewSelect().Model(&domObj).Scan(ctx, &domObj)
 
@@ -72,7 +77,12 @@ func (br BasicRepo[T, M]) List(ctx context.Context) ([]M, error) {
 		return nil, err
 	}
 
-	return domObj, nil
+	objs := make([]*M, len(domObj))
+	for i := range domObj {
+		objs[i] = &domObj[i]
+	}
+
+	return objs, nil
 }
 
 func (br BasicRepo[T, M]) Save(ctx context.Context, m *M) (*M, error) {
