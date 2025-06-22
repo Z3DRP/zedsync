@@ -60,6 +60,10 @@ func ParseJSON(r *http.Request, payload any) error {
 	return json.NewDecoder(r.Body).Decode(payload)
 }
 
+func SetJSONHeader(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+}
+
 func WriteJSON(w http.ResponseWriter, status int, msg any) error {
 	w.Header().Set("Content-Type", "application/json")
 

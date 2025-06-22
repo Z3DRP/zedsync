@@ -74,16 +74,21 @@ type RedisCfg struct {
 type JWTCfg struct {
 	Secret     string
 	Expiration time.Duration
+	Salty      string
 }
 
 func Load() (*Config, error) {
-	appEnv := getEnv("ENV", "dev")
-	if err := godotenv.Load(fmt.Sprintf(".env.%s", appEnv)); err != nil {
-		log.Printf("%s env does not exist", appEnv)
-	}
+	// appEnv := getEnv("ENV", "dev")
+	// if err := godotenv.Load(fmt.Sprintf(".env.%s", appEnv)); err != nil {
+	// 	log.Printf("%s env does not exist", appEnv)
+	// }
 
-	if err := godotenv.Load(".env"); err != nil {
-		log.Printf("warning could not load .env file %v", err)
+	// if err := godotenv.Load(".env"); err != nil {
+	// 	log.Printf("warning could not load .env file %v", err)
+	// }
+	appEnv, err := initializeEnv()
+	if err != nil {
+		log.Println(err.Error())
 	}
 
 	return &Config{
@@ -91,7 +96,7 @@ func Load() (*Config, error) {
 		Server: ServerCfg{
 			//change port dflt to 443 for prod
 			Port:         getEnv("PORT", "8090"),
-			Host:         getEnv("HOST", "localhost"),
+			Host:         getEnv("HOST", "0.0.0.0"),
 			ReadTimeout:  getDurationEnv("READ_TIMEOUT", 10*time.Second),
 			WriteTimeout: getDurationEnv("WRITE_TIMEOUT", 10*time.Second),
 		},
@@ -138,8 +143,33 @@ func Load() (*Config, error) {
 		Jwt: JWTCfg{
 			Secret:     mustGetEnv("JWT_SECRET"),
 			Expiration: getDurationEnv("JWT_EXPIRATION", 24*time.Hour),
+			Salty:      mustGetEnv("SALTY"),
 		},
 	}, nil
+}
+
+func GetAuthToken() ([]byte, error) {
+	_, err := initializeEnv()
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	authKey := mustGetEnv("AUTH_KEY")
+
+	return []byte(authKey), nil
+}
+
+func initializeEnv() (string, error) {
+	appEnv := getEnv("ENV", "dev")
+	if err := godotenv.Load(fmt.Sprintf(".env.%s", appEnv)); err != nil {
+		return "", fmt.Errorf("%s env does not exist", appEnv)
+	}
+
+	if err := godotenv.Load(".env"); err != nil {
+		return "", fmt.Errorf("warning could not load .env file %v", err)
+	}
+
+	return appEnv, nil
 }
 
 func getEnv(key, fallback string) string {
