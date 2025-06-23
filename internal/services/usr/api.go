@@ -12,7 +12,18 @@ import (
 
 type UserAPI struct {
 	s      UserService
-	logger crane.Zlogrus
+	logger *crane.Zlogrus
+}
+
+func Initialize(s UserService, l *crane.Zlogrus) UserAPI {
+	return UserAPI{
+		s:      s,
+		logger: l,
+	}
+}
+
+func (u UserAPI) Name() string {
+	return "user"
 }
 
 func (u UserAPI) RegisterRoutes(m *http.ServeMux) {

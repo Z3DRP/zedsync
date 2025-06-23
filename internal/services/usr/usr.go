@@ -13,6 +13,12 @@ type UserService struct {
 	repo usr.UserRepo
 }
 
+func New(r usr.UserRepo) UserService {
+	return UserService{
+		repo: r,
+	}
+}
+
 func (us UserService) Create(ctx context.Context, usr *domain.User) (*domain.User, error) {
 	var err error
 	usr.UID, err = uuid.NewRandom()

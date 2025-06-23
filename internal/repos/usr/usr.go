@@ -19,8 +19,8 @@ type UserRepo struct {
 	repo *repos.BasicRepo[int, domain.User]
 }
 
-func New(p store.Persister) *UserRepo {
-	return &UserRepo{
+func New(p store.Persister) UserRepo {
+	return UserRepo{
 		repo: repos.New[int, domain.User](p),
 	}
 }

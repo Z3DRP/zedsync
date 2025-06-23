@@ -148,6 +148,33 @@ func Load() (*Config, error) {
 	}, nil
 }
 
+func LoadDBConfig() (DatabaseCfg, error) {
+	_, err := initializeEnv()
+	if err != nil {
+		return DatabaseCfg{}, err
+	}
+
+	return DatabaseCfg{
+		Provider:        mustGetEnv("DB_PROVIDER"),
+		Host:            mustGetEnv("DB_HOST"),
+		Port:            getEnv("DB_PORT", "5432"),
+		User:            mustGetEnv("DB_USER"),
+		Password:        mustGetEnv("DB_PASSWORD"),
+		Name:            mustGetEnv("DB_NAME"),
+		SSLMode:         getEnv("DB_SSLMODE", "disable"),
+		SSLRoot:         getEnv("DB_SSL_ROOT", "none"),
+		MaxConns:        getIntEnv("DB_MAX_CONNS", 20),
+		MaxIdleConns:    getIntEnv("DB_MAX_IDLE_CONNS", 20),
+		MaxOpenConns:    getIntEnv("DB_MAX_OPEN_CONNS", 20),
+		DialTimeout:     getDurationEnv("DB_DIAL_TIMEOUT", 15),
+		WriteTimeout:    getDurationEnv("DB_WRITE_TIMEOUT", 15),
+		ReadTimeout:     getDurationEnv("DB_READ_TIMEOUT", 15),
+		ConnTimeout:     getDurationEnv("DB_CONN_TIMEOUT", 15),
+		MigrationsTable: getEnv("DB_MIGRATIONS_TABLE", "bun_migrations"),
+		MigrationsLock:  getEnv("DB_MIGRATIONS_LOCK", "bun_migration_lock"),
+	}, nil
+}
+
 func GetAuthToken() ([]byte, error) {
 	_, err := initializeEnv()
 	if err != nil {

@@ -35,6 +35,10 @@ type identifier interface {
 	~int | ~string
 }
 
+type Saver interface {
+	Name() string
+}
+
 type Repoer[T identifier, M any] interface {
 	Get(ctx context.Context, key T) (*M, error)
 	List(ctx context.Context) ([]*M, error)
