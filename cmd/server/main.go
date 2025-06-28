@@ -43,7 +43,7 @@ func run(serverCfg config.ServerCfg, con *sql.DB, services []string) error {
 		logger.MustDebugErr(err)
 		return err
 	}
-	server := api.NewServer(serverCfg, container.GetEndpoints())
+	server := api.NewServer(serverCfg, container.Endpoints())
 
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		logger.MustDebugErr(err)
