@@ -47,7 +47,7 @@ func NewUser(uid, avatar, email, phne, usrname, fname, lname string, role Role) 
 		Username:  usrname,
 		FirstName: fname,
 		LastName:  lname,
-		RoleID:    role.Id,
+		RoleID:    role.ID,
 	}, nil
 }
 
