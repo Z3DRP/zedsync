@@ -2,10 +2,14 @@ package usr
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 
+	"github.com/Z3DRP/zedsync/internal/auth"
 	"github.com/Z3DRP/zedsync/internal/crane"
 	"github.com/Z3DRP/zedsync/internal/domain"
+	"github.com/Z3DRP/zedsync/internal/dto"
 	"github.com/Z3DRP/zedsync/internal/repos"
 	"github.com/Z3DRP/zedsync/internal/request"
 )
@@ -34,6 +38,173 @@ func (u UserAPI) RegisterRoutes(m *http.ServeMux) {
 	m.HandleFunc("PUT /user/{id}", u.HandleEditUser)
 	m.HandleFunc("PATCH /user/{id}", u.HandleEditUser)
 	m.HandleFunc("DELTE /user/{id}", u.HandleDeleteUser)
+	m.HandleFunc("PUT /sign-up/{role}", u.HandleSignup)
+	m.HandleFunc("PUT /sign-in", u.HandleLogin)
+	m.HandleFunc("GET /whoami", u.HandleWhoAmI)
+}
+
+func (u UserAPI) HandleLogin(w http.ResponseWriter, r *http.Request) {
+	request.SetJSONHeader(w)
+	select {
+	case <-r.Context().Done():
+		u.logger.MustDebugErr(request.ErrReqTimeout)
+		request.HandleTimeout(w)
+	default:
+		var payload dto.LoginDto
+		if err := request.ParseJSON(r, &payload); err != nil {
+			u.logger.MustDebugErr(err)
+			request.WriteErr(w, http.StatusBadRequest, err)
+			return
+		}
+
+		if err := u.s.validator.Struct(payload); err != nil {
+			u.logger.MustDebugErr(err)
+			request.WriteErr(w, http.StatusBadRequest, err)
+			return
+		}
+
+		authenticated, user, err := u.s.Authenticate(r.Context(), payload.Username, payload.Password)
+
+		if err != nil {
+			u.logger.MustDebugErr(err)
+			request.WriteErr(w, http.StatusUnauthorized, request.ErrUnAuthorized)
+			return
+		}
+
+		if !authenticated {
+			request.WriteErr(w, http.StatusUnauthorized, request.ErrUnAuthorized)
+			return
+		}
+
+		token, err := auth.GenerateToken(user.UID.String(), user.Username, user.Role.Name)
+		if err != nil {
+			u.logger.MustDebugErr(fmt.Errorf("error generating token %v", err))
+			request.WriteErr(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		// for session based
+		// http.SetCookie(w, &http.Cookie{
+		// 	Name: "token",
+		// 	Value: token,
+		// 	Expires: auth.Expirey,
+		// 	HttpOnly: true,
+		// 	Secure: true,
+		// 	SameSite: http.SameSiteStrictMode,
+		// })
+
+		// TODO: use refresh tokens also
+		res := request.JSON{
+			"token": token,
+			"user":  user,
+		}
+		if err = request.WriteJSON(w, http.StatusOK, res); err != nil {
+			u.logger.MustDebugErr(err)
+			request.WriteErr(w, http.StatusInternalServerError, err)
+			return
+		}
+	}
+}
+
+func (u UserAPI) HandleSignup(w http.ResponseWriter, r *http.Request) {
+	request.SetJSONHeader(w)
+	select {
+	case <-r.Context().Done():
+		u.logger.MustDebugErr(request.ErrReqTimeout)
+		request.HandleTimeout(w)
+	default:
+		var payload dto.SignupDto
+		if err := request.ParseJSON(r, &payload); err != nil {
+			u.logger.MustDebugErr(err)
+			request.WriteErr(w, http.StatusBadRequest, err)
+		}
+
+		if err := u.s.validator.Struct(payload); err != nil {
+			request.WriteErr(w, http.StatusBadRequest, err)
+			return
+		}
+
+		roleName := r.PathValue("role")
+		if roleName == "" {
+			u.logger.MustDebugErr(errors.New("signup request did not have a specified role"))
+		}
+
+		role, err := u.s.cfgRepo.GetRole(r.Context(), roleName)
+		if err != nil {
+			u.logger.MustDebugErr(fmt.Errorf("role %v does not exist %w", role, err))
+			request.WriteErr(w, http.StatusBadRequest, err)
+		}
+
+		usr := u.s.SignupAdapter(payload)
+		usr.Role = &role
+		nUser, err := u.s.Create(r.Context(), usr)
+
+		if err != nil {
+			u.logger.MustDebugErr(err)
+			request.WriteErr(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		// TODO: use refresh tokens also
+		token, err := auth.GenerateToken(nUser.UID.String(), nUser.Username, nUser.Role.Name)
+		if err != nil {
+			u.logger.MustDebugErr(err)
+			request.WriteErr(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		res := request.JSON{
+			"token": token,
+			"user":  nUser,
+		}
+
+		if err = request.WriteJSON(w, http.StatusOK, res); err != nil {
+			u.logger.MustDebugErr(err)
+			request.WriteErr(w, http.StatusInternalServerError, err)
+			return
+		}
+	}
+}
+
+func (u UserAPI) HandleWhoAmI(w http.ResponseWriter, r *http.Request) {
+	select {
+	case <-r.Context().Done():
+		u.logger.MustDebugErr(request.ErrReqTimeout)
+		request.HandleTimeout(w)
+	default:
+		authHeader := r.Header.Get("Authorization")
+
+		if authHeader == "" {
+			err := request.NewAuthHeaderErr(r.URL)
+			u.logger.MustDebugErr(err)
+			request.WriteErr(w, http.StatusUnauthorized, request.ErrUnAuthorized)
+			return
+		}
+
+		tokenParts := strings.Split(authHeader, " ")
+		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
+			err := errors.New("token was not on header")
+			u.logger.MustDebugErr(err)
+			request.WriteErr(w, http.StatusUnauthorized, request.ErrUnAuthorized)
+			return
+		}
+
+		token := tokenParts[1]
+		usr, err := u.s.ValidateClaims(r.Context(), token)
+
+		if err != nil {
+			request.WriteErr(w, http.StatusUnauthorized, request.ErrUnAuthorized)
+		}
+
+		res := request.JSON{
+			"user": usr,
+		}
+
+		if err := request.WriteJSON(w, http.StatusOK, res); err != nil {
+			u.logger.MustDebugErr(err)
+			request.WriteErr(w, http.StatusInternalServerError, err)
+		}
+	}
 }
 
 func (u UserAPI) HandleAddUser(w http.ResponseWriter, r *http.Request) {

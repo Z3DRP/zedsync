@@ -6,9 +6,11 @@ import (
 
 	"github.com/Z3DRP/zedsync/internal/crane"
 	"github.com/Z3DRP/zedsync/internal/database/store"
+	"github.com/Z3DRP/zedsync/internal/repos/cfg"
 	urepo "github.com/Z3DRP/zedsync/internal/repos/usr"
 	"github.com/Z3DRP/zedsync/internal/services"
 	"github.com/Z3DRP/zedsync/internal/services/usr"
+	"github.com/go-playground/validator/v10"
 )
 
 type Container struct {
@@ -41,10 +43,12 @@ func (c Container) RegisterServices(names []string) error {
 }
 
 func (c Container) createService(name string) (services.API, error) {
+	v := validator.New(validator.WithRequiredStructEnabled())
+	configRepo := cfg.New(c.store)
 	switch name {
 	case "user":
 		userRepo := urepo.New(c.store)
-		usrService := usr.New(userRepo)
+		usrService := usr.New(userRepo, configRepo, v)
 		return usr.Initialize(usrService, c.logger), nil
 	default:
 		return nil, fmt.Errorf("unknown service %v", name)

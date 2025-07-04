@@ -34,3 +34,16 @@ func (f FileUploadDto) Validate() error {
 
 	return nil
 }
+
+type LoginDto struct {
+	Username string `json:"username" validate:"required"`
+	Password string `json:"password" validate:"required"`
+}
+
+type SignupDto struct {
+	Username  string `json:"username" validate:"required,alphanum,min=1,max=75"`
+	Password  string `json:"password" validate:"required,min=1,max=255"`
+	Email     string `json:"email" validate:"required,alphanum,min=1,max=150"`
+	FirstName string `json:"firstName" validate:"required,alpha,min=1,max=100"`
+	LastName  string `json:"lastName" validate:"required,alpha,min=1,max=100"`
+}

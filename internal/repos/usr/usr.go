@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/Z3DRP/zedsync/internal/database/store"
 	"github.com/Z3DRP/zedsync/internal/domain"
@@ -16,12 +17,12 @@ import (
 // maybe i should so i can use uuid to do lookups
 
 type UserRepo struct {
-	repo *repos.BasicRepo[int, domain.User]
+	repo *repos.BasicRepo[string, domain.User]
 }
 
 func New(p store.Persister) UserRepo {
 	return UserRepo{
-		repo: repos.New[int, domain.User](p),
+		repo: repos.New[string, domain.User](p),
 	}
 }
 
@@ -103,4 +104,17 @@ func (u UserRepo) Delete(ctx context.Context, id string) error {
 	}
 
 	return nil
+}
+
+func (u UserRepo) FetchByUsername(ctx context.Context, usrname string) (domain.User, error) {
+	var usr domain.User
+	err := u.repo.BnDB().NewSelect().Model(&domain.User{}).Where("? = ?", bun.Ident("username"), usrname).Scan(ctx, &usr)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return domain.User{}, fmt.Errorf("could not find user %w", err)
+		}
+		return domain.User{}, err
+	}
+
+	return domain.User{}, nil
 }

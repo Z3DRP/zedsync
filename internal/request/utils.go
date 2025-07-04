@@ -8,6 +8,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"unicode/utf8"
@@ -24,12 +25,25 @@ var (
 	ErrReqTimeout      = errors.New("request timeout")
 	ErrJSONParse       = errors.New("failed to parse json")
 	ErrInvalidData     = errors.New("invalid data")
+	ErrUnAuthorized    = errors.New("Unauthorized")
 )
 
 type JSON map[string]any
 type Pager struct {
 	Page  int
 	Limit int
+}
+
+type AuthHeaderErr struct {
+	url *url.URL
+}
+
+func NewAuthHeaderErr(url *url.URL) AuthHeaderErr {
+	return AuthHeaderErr{url: url}
+}
+
+func (a AuthHeaderErr) Error() string {
+	return fmt.Sprintf("request has missing authorization header, url: %v", a.url)
 }
 
 func WriteTimeoutResponse(w http.ResponseWriter) error {
